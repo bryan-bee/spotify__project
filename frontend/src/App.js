@@ -59,7 +59,7 @@ function App() {
       setIsLoadingUserInfo(false);
     } catch (error) {
       console.error('Error fetching user info:', error);
-      // Set isLoadingUserInfo back to false if there is an error
+      // Set isLoadingUserInfo back to false if there is an errors
       setIsLoadingUserInfo(false);
     }
   };

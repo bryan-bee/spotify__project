@@ -2,7 +2,7 @@ from flask_session import Session
 from flask import Flask, session
 from flask_cors import CORS, cross_origin
 app = Flask(__name__)
-CORS(app, supports_credentials=True)  # Apply CORS middleware to allow requests from all origins
+CORS(app, supports_credentials=True)  # Apply CORS middleware to allow requests from all origin
 from dotenv import load_dotenv
 load_dotenv()
 from controllers.homepage import homepage_controller
