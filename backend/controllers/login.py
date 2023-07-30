@@ -1,4 +1,4 @@
-from flask import Blueprint, request, redirect, url_for, session, jsonify
+from flask import Blueprint, request, redirect, url_for, session
 import spotipy
 from flask_cors import CORS, cross_origin
 from spotipy.oauth2 import SpotifyOAuth
@@ -29,7 +29,7 @@ def redirectPage():
     sp_oauth = create_spotify_oauth()
     session.clear()
     code = request.args.get('code')
-    token_info = sp_oauth.get_access_token(code)
+    token_info = sp_oauth.get_access_token(code, check_cache=False)
     session["token_info"] = token_info
     return redirect(url_for("homepage.homepage"))  # Redirect to the dashboard page or any other page
 
@@ -40,3 +40,5 @@ def create_spotify_oauth():
 		redirect_uri= url_for("login.redirectPage", _external=True),
 		scope = SPOTIFY_SCOPES)
 
+# if os.path.exists(r'C:\Users\Bryan\Documents\Spotipy project\backend\.cache'):
+#         os.remove(r'C:\Users\Bryan\Documents\Spotipy project\backend\.cache')

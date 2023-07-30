@@ -3,11 +3,12 @@ from spotipy.oauth2 import SpotifyOAuth
 from flask import Blueprint, jsonify, session, redirect, url_for
 import time
 import requests
+import os
 
 homepage_controller = Blueprint('homepage', __name__)
 
 # Spotify API base URL
-SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1/'
+#SPOTIFY_API_BASE_URL = 'https://api.spotify.com/v1/'
 
 @homepage_controller.route('/api/homepage', methods=['GET'])
 def homepage():
@@ -22,7 +23,7 @@ def homepage():
 
     # Fetch user's top tracks (most listened to tracks)
     time_range = 'medium_term'  # Can be 'short_term', 'medium_term', or 'long_term'
-    top_tracks = sp.current_user_top_tracks(time_range=time_range, limit=10)
+    top_tracks = sp.current_user_top_tracks(time_range=time_range, limit=5)
 
     # Process the user information and most listened tracks
     user_data = {
@@ -36,7 +37,7 @@ def homepage():
         artists = ', '.join([artist['name'] for artist in track['artists']])
         user_data['top_tracks'].append({'song_name': song_name, 'artists': artists})
 
-    return user_data
+    return user_data['top_tracks']
 
 def get_token():
     token_valid = False
@@ -61,7 +62,8 @@ def get_token():
 
 def create_spotify_oauth():
     return SpotifyOAuth(
-            client_id="id",
-            client_secret="secret",
-            redirect_uri=url_for('authorize', _external=True),
+            client_id=os.getenv("SPOTIFY_CLIENT_ID"),
+            client_secret=os.getenv("SPOTIFY_CLIENT_SECRET"),
+            redirect_uri=url_for('login.redirectPage', _external=True),
             scope="user-library-read")
+

@@ -11,6 +11,8 @@ from controllers.homepage import homepage_controller
 from controllers.login import login_controller
 from controllers.logout import logout_controller
 
+app.config['SESSION_TYPE'] = 'filesystem'
+
 Session(app)
 
 # Register the 'authenticate' controller
