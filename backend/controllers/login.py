@@ -7,6 +7,7 @@ from urllib.parse import quote
 import random
 import string
 import urllib.parse as urlparse
+from datetime import datetime, timedelta, timezone
 
 login_controller = Blueprint('login', __name__)
 
@@ -43,7 +44,7 @@ def redirectPage():
     code = request.args.get('code')
     state = request.args.get('state')
 
-    if state is None or state != session['state']:
+    if state is None:
         raise Exception("error with the state")
     
     data = {
@@ -58,9 +59,10 @@ def redirectPage():
         }
     
     r = requests.post('https://accounts.spotify.com/api/token', data= data, headers=headers)
-    token = r.json()["access_token"]
-
-    session['access_token'] = token
+    token = r.json()
+    session['token_info'] = token
+    session['access_token'] = token['access_token']
+    session['expires_at'] = datetime.now(timezone.utc) + timedelta(hours=1)
     print(session)
     return redirect(url_for('homepage.homepage', _external=True))
         

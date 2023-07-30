@@ -9,11 +9,13 @@ load_dotenv()
 from controllers.homepage import homepage_controller
 from controllers.login import login_controller
 from controllers.logout import logout_controller
+from controllers.topTracks import topTracks_controller
 
 # Register the 'authenticate' controller
 app.register_blueprint(homepage_controller)
 app.register_blueprint(login_controller)
 app.register_blueprint(logout_controller)
+app.register_blueprint(topTracks_controller)
 
 if __name__ == '__main__':
     app.run(debug=True)
