@@ -18,7 +18,7 @@ SPOTIFY_SCOPES = " ".join(scopes)
 @login_controller.route('/api/login', methods=['GET'])
 def login():	
     sp_oauth = create_spotify_oauth()
-    auth_url = sp_oauth.get_authorize_url()
+    auth_url = sp_oauth.get_authorize_url() + '?show_dialog=true'
     # Redirect the user to the Spotify authorization URL
     return redirect(auth_url)
 
@@ -38,7 +38,8 @@ def create_spotify_oauth():
 		client_id = SPOTIFY_CLIENT_ID,
 		client_secret = SPOTIFY_CLIENT_SECRET,
 		redirect_uri= url_for("login.redirectPage", _external=True),
-		scope = SPOTIFY_SCOPES)
+		scope = SPOTIFY_SCOPES,
+        )
 
 # if os.path.exists(r'C:\Users\Bryan\Documents\Spotipy project\backend\.cache'):
 #         os.remove(r'C:\Users\Bryan\Documents\Spotipy project\backend\.cache')
