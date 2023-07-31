@@ -7,23 +7,64 @@ import os
 
 topStuff_controller = Blueprint('topStuff', __name__)
 
+#favorite_songs is a list of dictionaries. index 1-10 each dictionary represents 1 song where key is song and value is artist
+#favorite_artists is a list of dictionaries containing name, url , and genre of those artists
+#artist_names , artist_urls are lists of those individuals
+
+
 @topStuff_controller.route('/api/topStuff', methods=['GET', 'POST'])
 def topStuff():
     if 'access_token' not in session or session['access_token'] == None:
         return redirect(url_for('login.login'))
     token = session['access_token']
     tracks = topTracks(token)
-    artists = topArtists(token)
-    user_info = {
-        'fav_artists' : artists,
-        #'fav_tracks' : tracks
-    }
+    artistsDict = topArtists(token)
+
     favorite_artists = []
+    artist_names = []
+    artist_urls = []
+    favorite_genres = {}
+    favorite_songs = []
 
-    for i in user_info['fav_artists']['items']:
-        favorite_artists.append(i['name'])
+    for i in artistsDict['items']:
+        artist_name = i['name']
+        artist_pic_url = i['images'][0]     
+        genres = i['genres']    
 
-    return str(favorite_artists)
+        dict = {
+            'name': artist_name,
+            'url' : artist_pic_url,
+            'genres' : genres
+        }
+        favorite_artists.append(dict)
+    
+    for i in favorite_artists:
+        artist_names.append(i['name'])
+        artist_urls.append(i['url'])
+        for genre in i['genres']:
+            if genre in favorite_genres:
+                favorite_genres[genre] +=1
+            else:
+                favorite_genres[genre] =1
+    #artist_names favorite_genres artist_urls
+
+    for track in tracks['top_tracks']:
+        favorite_songs.append({track['song_name'] : track['artists']})
+    
+    best_genre = max(favorite_genres.items(), key=lambda item: item[1])
+
+
+    all_info = {
+        'favorite_songs' : favorite_songs,
+        'favorite_artists' : favorite_artists,
+        'favorite_genres' : favorite_genres,
+        'best_genre' : best_genre,
+
+
+    }
+    return  all_info
+
+
 
 def topTracks(token):  
     headers = {
@@ -46,7 +87,8 @@ def topTracks(token):
 
     for track in top_tracks['items']:
         song_name = track['name']
-        user_data['top_tracks'].append({'song_name': song_name})
+        artists = ', '.join([artist['name'] for artist in track['artists']])
+        user_data['top_tracks'].append({'song_name': song_name, 'artists': artists})
 
     return user_data
 
