@@ -1,29 +1,31 @@
-from flask import Blueprint, request, redirect, url_for, session
-from flask_cors import CORS, cross_origin
-from spotipy.oauth2 import SpotifyOAuth
-import requests
 import os
-from urllib.parse import quote
 import random
 import string
 import urllib.parse as urlparse
-from datetime import datetime, timedelta, timezone
+
+import requests
+from flask import Blueprint, request, redirect, session
+
+from spotify_auth import basic_auth_header, store_token_response
 
 login_controller = Blueprint('login', __name__)
 
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-SPOTIFY_CLIENT_SECRET= os.getenv("SPOTIFY_CLIENT_SECRET")
-SPOTIFY_REDIRECT_URI= os.getenv("SPOTIFY_REDIRECT_URI")
+SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
 scopes = os.getenv("SPOTIFY_SCOPES").split()
 SPOTIFY_SCOPES = " ".join(scopes)
+
 
 def generate_random_string(length):
     letters = string.ascii_lowercase
     return ''.join(random.choice(letters) for i in range(length))
 
-#login function that sends the user to the spotify login page
+
+# Sends the user to Spotify's own login/consent page. This is a full browser
+# navigation (not a fetch call) since Spotify needs to show its own UI.
 @login_controller.route('/api/login', methods=['GET'])
-def login():	
+def login():
     state = generate_random_string(16)
     session['state'] = state
     auth_url = 'https://accounts.spotify.com/authorize?' + urlparse.urlencode({
@@ -32,37 +34,37 @@ def login():
         'redirect_uri': SPOTIFY_REDIRECT_URI,
         'state': state,
         'scope': SPOTIFY_SCOPES,
-        'show_dialog' : 'true'
+        'show_dialog': 'true'
     })
-    # Redirect the user to the Spotify authorization URL
     return redirect(auth_url)
 
-#the redirect function that once the user logs in 
-# and grants permission, will get send back to here
+
+# Spotify redirects the browser back here after the user grants (or denies) access.
 @login_controller.route('/api/redirect', methods=['GET'])
 def redirectPage():
     code = request.args.get('code')
     state = request.args.get('state')
+    error = request.args.get('error')
 
-    if state is None:
-        raise Exception("error with the state")
-    
+    if error:
+        return redirect(f"{FRONTEND_ORIGIN}/?login_error={error}")
+
+    if state is None or state != session.get('state'):
+        return redirect(f"{FRONTEND_ORIGIN}/?login_error=state_mismatch")
+
     data = {
         'code': code,
         'redirect_uri': SPOTIFY_REDIRECT_URI,
         'grant_type': 'authorization_code'
-        }
-    
+    }
     headers = {
-        'Authorization': 'Basic ' + 'NzU5OThhYjVkYmU4NDU1NDkzODUyODdlNjdkNTRlYjg6M2QxMjYxNTg1ZTEyNGNkMzhjY2NlMmE0NzY1OTI1ZmI=',
-        'Content-Type' : "application/x-www-form-urlencoded"
-        }
-    
-    r = requests.post('https://accounts.spotify.com/api/token', data= data, headers=headers)
-    token = r.json()
-    session['token_info'] = token
-    session['access_token'] = token['access_token']
-    session['expires_at'] = datetime.now(timezone.utc) + timedelta(hours=1)
-    print(session)
-    return redirect(url_for('homepage.homepage', _external=True))
-        
+        'Authorization': basic_auth_header(),
+        'Content-Type': "application/x-www-form-urlencoded"
+    }
+
+    r = requests.post('https://accounts.spotify.com/api/token', data=data, headers=headers)
+    if r.status_code != 200:
+        return redirect(f"{FRONTEND_ORIGIN}/?login_error=token_exchange_failed")
+
+    store_token_response(r.json())
+    return redirect(f"{FRONTEND_ORIGIN}/dashboard")
