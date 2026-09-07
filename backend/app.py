@@ -29,15 +29,20 @@ Session(app)
 # the session cookie with each request, so credentials must be explicitly allowed.
 CORS(app, supports_credentials=True, origins=[os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")])
 
+from db import init_db
 from controllers.homepage import homepage_controller
 from controllers.login import login_controller
 from controllers.logout import logout_controller
 from controllers.topStuff import topStuff_controller
+from controllers.share import share_controller
+
+init_db()
 
 app.register_blueprint(homepage_controller)
 app.register_blueprint(login_controller)
 app.register_blueprint(logout_controller)
 app.register_blueprint(topStuff_controller)
+app.register_blueprint(share_controller)
 
 if __name__ == '__main__':
     app.run(debug=True)

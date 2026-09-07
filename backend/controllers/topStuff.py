@@ -1,110 +1,102 @@
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
-from flask import Blueprint, jsonify, session, redirect, url_for
-import time
 import requests
-import os
+from flask import Blueprint, jsonify, request
+
+from spotify_auth import NotAuthenticated, get_valid_access_token
 
 topStuff_controller = Blueprint('topStuff', __name__)
 
-#favorite_songs is a list of dictionaries. index 1-10 each dictionary represents 1 song where key is song and value is artist
-#favorite_artists is a list of dictionaries containing name, url , and genre of those artists
-#artist_names , artist_urls are lists of those individuals
+# Spotify's own time_range buckets, mapped to labels the frontend can show directly.
+VALID_TIME_RANGES = {
+    'short_term': 'Last 4 Weeks',
+    'medium_term': 'Last 6 Months',
+    'long_term': 'All Time',
+}
 
 
-@topStuff_controller.route('/api/topStuff', methods=['GET', 'POST'])
+@topStuff_controller.route('/api/topStuff', methods=['GET'])
 def topStuff():
-    if 'access_token' not in session or session['access_token'] == None:
-        return redirect(url_for('login.login'))
-    token = session['access_token']
-    tracks = topTracks(token)
-    artistsDict = topArtists(token)
+    time_range = request.args.get('time_range', 'medium_term')
+    if time_range not in VALID_TIME_RANGES:
+        return jsonify({'error': 'invalid_time_range', 'valid_values': list(VALID_TIME_RANGES)}), 400
+
+    try:
+        token = get_valid_access_token()
+    except NotAuthenticated:
+        return jsonify({'error': 'not_authenticated'}), 401
+
+    try:
+        stats = build_wrapped_stats(token, time_range)
+    except SpotifyApiError as e:
+        return jsonify({'error': 'spotify_api_error', 'detail': str(e)}), 502
+
+    return jsonify(stats)
+
+
+class SpotifyApiError(Exception):
+    pass
+
+
+def build_wrapped_stats(token, time_range):
+    """Fetch top tracks/artists for a given Spotify time_range and shape them
+    into the payload both the dashboard and the public share page render."""
+    tracks = _fetch_top_tracks(token, time_range)
+    artists = _fetch_top_artists(token, time_range)
 
     favorite_artists = []
-    artist_names = []
-    artist_urls = []
     favorite_genres = {}
-    favorite_songs = []
 
-    for i in artistsDict['items']:
-        artist_name = i['name']
-        artist_pic_url = i['images'][0]     
-        genres = i['genres']    
+    for artist in artists['items']:
+        images = artist.get('images') or []
+        favorite_artists.append({
+            'name': artist['name'],
+            'url': images[0]['url'] if images else None,
+            'genres': artist['genres'],
+        })
+        for genre in artist['genres']:
+            favorite_genres[genre] = favorite_genres.get(genre, 0) + 1
 
-        dict = {
-            'name': artist_name,
-            'url' : artist_pic_url,
-            'genres' : genres
+    favorite_songs = [
+        {'song_name': track['song_name'], 'artists': track['artists']}
+        for track in tracks
+    ]
+
+    best_genre = max(favorite_genres.items(), key=lambda item: item[1])[0] if favorite_genres else None
+
+    return {
+        'time_range': time_range,
+        'time_range_label': VALID_TIME_RANGES[time_range],
+        'favorite_songs': favorite_songs,
+        'favorite_artists': favorite_artists,
+        'favorite_genres': favorite_genres,
+        'best_genre': best_genre,
+    }
+
+
+def _fetch_top_tracks(token, time_range):
+    response = requests.get(
+        'https://api.spotify.com/v1/me/top/tracks',
+        headers={'Authorization': 'Bearer ' + token},
+        params={'time_range': time_range, 'limit': 10},
+    )
+    if response.status_code != 200:
+        raise SpotifyApiError(f'top/tracks returned {response.status_code}')
+
+    return [
+        {
+            'song_name': track['name'],
+            'artists': ', '.join(artist['name'] for artist in track['artists']),
         }
-        favorite_artists.append(dict)
-    
-    for i in favorite_artists:
-        artist_names.append(i['name'])
-        artist_urls.append(i['url'])
-        for genre in i['genres']:
-            if genre in favorite_genres:
-                favorite_genres[genre] +=1
-            else:
-                favorite_genres[genre] =1
-    #artist_names favorite_genres artist_urls
-
-    for track in tracks['top_tracks']:
-        favorite_songs.append({track['song_name'] : track['artists']})
-    
-    best_genre = max(favorite_genres.items(), key=lambda item: item[1])
+        for track in response.json()['items']
+    ]
 
 
-    all_info = {
-        'favorite_songs' : favorite_songs,
-        'favorite_artists' : favorite_artists,
-        'favorite_genres' : favorite_genres,
-        'best_genre' : best_genre,
+def _fetch_top_artists(token, time_range):
+    response = requests.get(
+        'https://api.spotify.com/v1/me/top/artists',
+        headers={'Authorization': 'Bearer ' + token},
+        params={'time_range': time_range, 'limit': 5},
+    )
+    if response.status_code != 200:
+        raise SpotifyApiError(f'top/artists returned {response.status_code}')
 
-
-    }
-    return  all_info
-
-
-
-def topTracks(token):  
-    headers = {
-        'Authorization' : 'Bearer ' + token
-    }
-    params ={
-        'time_range' : 'long_term',
-        'limit' : '10'
-    }
-    response = requests.get('https://api.spotify.com/v1/me/top/tracks', headers = headers, params=params)
-
-    if response.status_code == 200:
-        top_tracks = response.json()
-    else:
-        error_data = response.json()
-
-    user_data = {
-        'top_tracks': []
-    }
-
-    for track in top_tracks['items']:
-        song_name = track['name']
-        artists = ', '.join([artist['name'] for artist in track['artists']])
-        user_data['top_tracks'].append({'song_name': song_name, 'artists': artists})
-
-    return user_data
-
-def topArtists(token):  
-    headers = {
-        'Authorization' : 'Bearer ' + token
-    }
-    params ={
-        'time_range' : 'long_term',
-        'limit' : '5'
-    }
-    response = requests.get('https://api.spotify.com/v1/me/top/artists', headers = headers, params=params)
-
-    if response.status_code == 200:
-        top_artists = response.json()
-    else:
-        error_data = response.json()
-
-    return top_artists
+    return response.json()
