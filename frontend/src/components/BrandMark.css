@@ -1,0 +1,28 @@
+.brand-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.brand-mark--sm {
+  font-size: 0.9rem;
+}
+
+.brand-mark--md {
+  font-size: 1.3rem;
+}
+
+.brand-mark--lg {
+  font-size: 2.2rem;
+}
+
+.brand-mark__icon {
+  filter: drop-shadow(0 0 6px rgba(255, 210, 63, 0.6));
+}
+
+.brand-mark__accent {
+  color: var(--bee-green);
+}

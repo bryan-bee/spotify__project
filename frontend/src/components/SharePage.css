@@ -1,0 +1,19 @@
+.share-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+}
+
+.share-page--empty {
+  flex-direction: column;
+  text-align: center;
+  gap: 14px;
+}
+
+.share-page__cta {
+  color: var(--bee-green);
+  font-weight: 700;
+  text-decoration: none;
+}
