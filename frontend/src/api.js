@@ -1,6 +1,16 @@
-// All calls go through relative paths so CRA's dev-server proxy (see
-// package.json "proxy") forwards them to the Flask backend during
-// development, and so they stay same-origin in production behind one host.
+// fetch() calls below use relative paths - CRA's dev-server proxy (see
+// package.json "proxy") forwards those to Flask during development, and
+// they stay same-origin in production behind one host.
+//
+// LOGIN_URL is different: it's used for a real full-page navigation
+// (a plain <a href>), not a fetch call. CRA's dev-server proxy only forwards
+// requests whose Accept header does NOT ask for text/html - a real page
+// navigation always sends "Accept: text/html", so the dev server would
+// serve index.html instead of proxying it to Flask (this is intentional on
+// CRA's part, so refreshing a client-side route doesn't get sent to the
+// API). That makes the relative-path trick unusable for the login link, so
+// it points directly at the Flask server instead.
+export const LOGIN_URL = `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000'}/api/login`;
 
 async function request(path, options = {}) {
   const response = await fetch(path, {

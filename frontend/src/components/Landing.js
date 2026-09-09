@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import BrandMark from './BrandMark';
-import { fetchMe } from '../api';
+import { fetchMe, LOGIN_URL } from '../api';
 import './Landing.css';
 
 const ERROR_MESSAGES = {
@@ -39,7 +39,7 @@ export default function Landing() {
           {ERROR_MESSAGES[loginError] || 'Something went wrong logging in, please try again.'}
         </p>
       )}
-      <a className="landing__cta" href="/api/login">
+      <a className="landing__cta" href={LOGIN_URL}>
         Log in with Spotify
       </a>
     </div>
