@@ -41,6 +41,23 @@
   z-index: 3;
 }
 
+.wc-mute-toggle {
+  position: absolute;
+  top: 24px;
+  right: 16px;
+  z-index: 4;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  width: 34px;
+  height: 34px;
+  font-size: 1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .wc-tap {
   position: absolute;
   top: 0;
@@ -143,6 +160,30 @@
   font-weight: 400;
   font-size: 0.8rem;
   opacity: 0.75;
+}
+
+.wc-now-playing {
+  position: relative;
+  z-index: 3;
+  align-self: center;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 48px);
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--bee-white);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.wc-now-playing__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wc-footer {

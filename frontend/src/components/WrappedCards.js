@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import BrandMark from './BrandMark';
 import './WrappedCards.css';
@@ -12,6 +12,7 @@ const GRADIENTS = [
 ];
 
 function buildCards(stats, displayName) {
+  const previews = stats.previews || {};
   const cards = [
     {
       key: 'intro',
@@ -28,6 +29,7 @@ function buildCards(stats, displayName) {
   if (stats.best_genre) {
     cards.push({
       key: 'genre',
+      preview: previews.top_genre,
       content: (
         <>
           <p className="wc-eyebrow">Your top genre</p>
@@ -40,6 +42,7 @@ function buildCards(stats, displayName) {
   if (stats.favorite_artists && stats.favorite_artists.length > 0) {
     cards.push({
       key: 'artists',
+      preview: previews.top_artist,
       content: (
         <>
           <p className="wc-eyebrow">Top Artists</p>
@@ -60,6 +63,7 @@ function buildCards(stats, displayName) {
   if (stats.favorite_songs && stats.favorite_songs.length > 0) {
     cards.push({
       key: 'songs',
+      preview: previews.top_song,
       content: (
         <>
           <p className="wc-eyebrow">Top Songs</p>
@@ -84,14 +88,76 @@ function buildCards(stats, displayName) {
 
 export default function WrappedCards({ stats, displayName, footer }) {
   const [index, setIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  // Persists across card navigation, unlike pausing - muting here means "don't
+  // autoplay the next clip either," not just "stop the current one."
+  const [muted, setMuted] = useState(false);
+  const audioRef = useRef(null);
   const cards = buildCards(stats, displayName);
   const card = cards[index];
 
-  const goNext = () => setIndex((i) => Math.min(i + 1, cards.length - 1));
-  const goPrev = () => setIndex((i) => Math.max(i - 1, 0));
+  useEffect(() => {
+    const audio = audioRef.current;
+    return () => audio && audio.pause();
+  }, []);
+
+  function playCardAudio(targetCard) {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.pause();
+    if (targetCard.preview) {
+      audio.src = targetCard.preview.preview_url;
+      audio.currentTime = 0;
+      if (!muted) {
+        // Autoplay is allowed here because this only ever runs inside a click
+        // handler (goNext/goPrev) - i.e. as a direct result of a user gesture.
+        audio.play().catch(() => {});
+      }
+    } else {
+      audio.removeAttribute('src');
+    }
+  }
+
+  function goNext() {
+    if (index >= cards.length - 1) return;
+    const next = index + 1;
+    playCardAudio(cards[next]);
+    setIndex(next);
+  }
+
+  function goPrev() {
+    if (index <= 0) return;
+    const prev = index - 1;
+    playCardAudio(cards[prev]);
+    setIndex(prev);
+  }
+
+  function toggleMute() {
+    const next = !muted;
+    const audio = audioRef.current;
+    if (audio) {
+      if (next) {
+        audio.pause();
+      } else if (card.preview) {
+        if (audio.src !== card.preview.preview_url) {
+          audio.src = card.preview.preview_url;
+          audio.currentTime = 0;
+        }
+        audio.play().catch(() => {});
+      }
+    }
+    setMuted(next);
+  }
 
   return (
     <div className="wc-shell" style={{ background: GRADIENTS[index % GRADIENTS.length] }}>
+      <audio
+        ref={audioRef}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
+      />
+
       <div className="wc-progress">
         {cards.map((c, i) => (
           <span key={c.key} className={`wc-progress-seg ${i <= index ? 'is-filled' : ''}`} />
@@ -101,6 +167,14 @@ export default function WrappedCards({ stats, displayName, footer }) {
       <div className="wc-topbar">
         <BrandMark size="sm" />
       </div>
+
+      <button
+        className="wc-mute-toggle"
+        aria-label={muted ? 'Unmute preview clips' : 'Mute preview clips'}
+        onClick={toggleMute}
+      >
+        {muted ? '🔇' : '🔊'}
+      </button>
 
       <button className="wc-tap wc-tap--left" aria-label="Previous card" onClick={goPrev} disabled={index === 0} />
       <button className="wc-tap wc-tap--right" aria-label="Next card" onClick={goNext} disabled={index === cards.length - 1} />
@@ -117,6 +191,15 @@ export default function WrappedCards({ stats, displayName, footer }) {
           {card.content}
         </motion.div>
       </AnimatePresence>
+
+      {card.preview && (
+        <button className="wc-now-playing" onClick={toggleMute}>
+          <span className="wc-now-playing__icon">{muted ? '🔇' : isPlaying ? '⏸' : '▶'}</span>
+          <span className="wc-now-playing__text">
+            {card.preview.track_name} — {card.preview.artist_name}
+          </span>
+        </button>
+      )}
 
       {index === cards.length - 1 && footer && <div className="wc-footer">{footer}</div>}
     </div>
