@@ -57,37 +57,3 @@
 .dashboard__status--error {
   color: #ff6b6b;
 }
-
-.dashboard__share-btn {
-  background: var(--bee-white);
-  color: #06210f;
-  border: none;
-  border-radius: 999px;
-  padding: 12px 26px;
-  font-weight: 700;
-}
-
-.dashboard__share-result {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-  max-width: 320px;
-}
-
-.dashboard__share-result input {
-  flex: 1;
-  min-width: 0;
-  border-radius: 999px;
-  border: none;
-  padding: 10px 14px;
-  font-size: 0.8rem;
-}
-
-.dashboard__share-result button {
-  background: var(--bee-green);
-  border: none;
-  color: #06210f;
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 0 16px;
-}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import BrandMark from './BrandMark';
+import ShareMenu from './ShareMenu';
 import './WrappedCards.css';
 
 const GRADIENTS = [
@@ -86,13 +87,14 @@ function buildCards(stats, displayName) {
   return cards;
 }
 
-export default function WrappedCards({ stats, displayName, footer }) {
+export default function WrappedCards({ stats, displayName, footer, shareEnabled, onCreateShareLink }) {
   const [index, setIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   // Persists across card navigation, unlike pausing - muting here means "don't
   // autoplay the next clip either," not just "stop the current one."
   const [muted, setMuted] = useState(false);
   const audioRef = useRef(null);
+  const shellRef = useRef(null);
   const cards = buildCards(stats, displayName);
   const card = cards[index];
 
@@ -150,7 +152,7 @@ export default function WrappedCards({ stats, displayName, footer }) {
   }
 
   return (
-    <div className="wc-shell" style={{ background: GRADIENTS[index % GRADIENTS.length] }}>
+    <div className="wc-shell" ref={shellRef} style={{ background: GRADIENTS[index % GRADIENTS.length] }}>
       <audio
         ref={audioRef}
         onPlay={() => setIsPlaying(true)}
@@ -201,7 +203,12 @@ export default function WrappedCards({ stats, displayName, footer }) {
         </button>
       )}
 
-      {index === cards.length - 1 && footer && <div className="wc-footer">{footer}</div>}
+      {index === cards.length - 1 && shareEnabled && (
+        <div className="wc-footer">
+          <ShareMenu shellRef={shellRef} onCreateShareLink={onCreateShareLink} />
+        </div>
+      )}
+      {index === cards.length - 1 && !shareEnabled && footer && <div className="wc-footer">{footer}</div>}
     </div>
   );
 }

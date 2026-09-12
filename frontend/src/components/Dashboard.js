@@ -17,8 +17,6 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [shareUrl, setShareUrl] = useState(null);
-  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     fetchMe()
@@ -30,23 +28,17 @@ export default function Dashboard() {
     if (!me) return;
     setLoading(true);
     setError(null);
-    setShareUrl(null);
     fetchTopStuff(timeRange)
       .then(setStats)
       .catch(() => setError('Could not load your stats from Spotify. Try again in a bit.'))
       .finally(() => setLoading(false));
   }, [me, timeRange]);
 
-  async function handleShare() {
-    setSharing(true);
-    try {
-      const { share_id } = await createShare(timeRange);
-      setShareUrl(`${window.location.origin}/share/${share_id}`);
-    } catch {
-      setError('Could not create a share link. Try again in a bit.');
-    } finally {
-      setSharing(false);
-    }
+  // Passed down to ShareMenu (via WrappedCards) - it only gets called if the
+  // user picks "Copy Link", so a share snapshot is only ever created on demand.
+  async function handleCreateShareLink() {
+    const { share_id } = await createShare(timeRange);
+    return `${window.location.origin}/share/${share_id}`;
   }
 
   async function handleLogout() {
@@ -84,18 +76,8 @@ export default function Dashboard() {
         <WrappedCards
           stats={stats}
           displayName={me.display_name}
-          footer={
-            shareUrl ? (
-              <div className="dashboard__share-result">
-                <input readOnly value={shareUrl} onFocus={(e) => e.target.select()} />
-                <button onClick={() => navigator.clipboard.writeText(shareUrl)}>Copy</button>
-              </div>
-            ) : (
-              <button className="dashboard__share-btn" onClick={handleShare} disabled={sharing}>
-                {sharing ? 'Creating link…' : 'Share this Wrapped'}
-              </button>
-            )
-          }
+          shareEnabled
+          onCreateShareLink={handleCreateShareLink}
         />
       )}
     </div>
