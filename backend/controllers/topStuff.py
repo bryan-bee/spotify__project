@@ -46,13 +46,16 @@ def build_wrapped_stats(token, time_range):
     favorite_artists = []
     favorite_genres = {}
 
-    for artist in artists['items']:
+    for rank_index, artist in enumerate(artists['items']):
         images = artist.get('images') or []
+        popularity = artist.get('popularity')
         favorite_artists.append({
             'id': artist['id'],
             'name': artist['name'],
             'url': images[0]['url'] if images else None,
             'genres': artist['genres'],
+            'popularity': popularity,
+            'estimated_top_percent': _estimate_top_listener_percent(popularity, rank_index),
         })
         for genre in artist['genres']:
             favorite_genres[genre] = favorite_genres.get(genre, 0) + 1
@@ -79,6 +82,28 @@ def build_wrapped_stats(token, time_range):
         'best_genre': best_genre,
         'previews': previews,
     }
+
+
+def _estimate_top_listener_percent(popularity, rank_index):
+    """A clearly-labeled ESTIMATE, not real Spotify data - the public Web API has no
+    endpoint that reveals a user's actual percentile rank among an artist's listeners
+    (that's Spotify's own internal analytics, and it's what the real Spotify Wrapped
+    uses; third-party apps can't get it). This derives a plausible-feeling number from
+    two real, available signals instead:
+
+    - `popularity` (Spotify's own real 0-100 artist popularity score): a more
+      mainstream artist has a much larger total listener base, so being a fan of one
+      is statistically less rare than being a fan of a niche artist with few listeners
+      - a lower popularity score produces a smaller (more impressive) baseline.
+    - `rank_index` (this artist's real rank, 0-based, among the user's own top
+      artists for this period): ranking as someone's #1 most-played artist is a
+      stronger fan signal than ranking 5th, so each step down adds a flat penalty.
+
+    The frontend must label this "Est." - it is a fun approximation, not a fact about
+    the artist's real global listener base.
+    """
+    baseline = max(0.5, round((100 - (popularity or 0)) / 2, 2))
+    return min(round(baseline + rank_index * 3, 2), 99.99)
 
 
 def _build_previews(token, market, top_tracks, favorite_artists, best_genre):

@@ -52,7 +52,14 @@ function buildCards(stats, displayName) {
               <li key={artist.name} className="wc-list-item">
                 <span className="wc-rank">{i + 1}</span>
                 {artist.url && <img className="wc-thumb" src={artist.url} alt="" />}
-                <span className="wc-list-label">{artist.name}</span>
+                <span className="wc-list-label">
+                  {artist.name}
+                  {artist.estimated_top_percent != null && (
+                    <span className="wc-list-sub">
+                      Est. top {artist.estimated_top_percent.toFixed(2)}% listener
+                    </span>
+                  )}
+                </span>
               </li>
             ))}
           </ol>
