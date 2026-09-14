@@ -58,30 +58,11 @@
   justify-content: center;
 }
 
-.wc-tap {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 50%;
-  background: transparent;
-  border: none;
-  z-index: 2;
-}
-
-.wc-tap:disabled {
-  cursor: default;
-}
-
-.wc-tap--left {
-  left: 0;
-}
-
-.wc-tap--right {
-  right: 0;
-}
-
 .wc-card {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -165,6 +146,7 @@
 .wc-now-playing {
   position: relative;
   z-index: 3;
+  flex-shrink: 0;
   align-self: center;
   margin-bottom: 10px;
   display: flex;
@@ -189,6 +171,7 @@
 .wc-footer {
   position: relative;
   z-index: 3;
+  flex-shrink: 0;
   padding: 18px 24px 28px;
   display: flex;
   justify-content: center;

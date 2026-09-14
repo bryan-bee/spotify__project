@@ -141,6 +141,22 @@ export default function WrappedCards({ stats, displayName, footer, shareEnabled,
     setIndex(prev);
   }
 
+  // Tapping the left/right half of the card advances/rewinds, Stories-style.
+  // This lives on a real click handler (not a full-height overlay button)
+  // specifically so it coexists with scrolling: a touch-drag scroll doesn't
+  // fire a click event, but an overlay button sitting on top of the
+  // scrollable area would intercept the drag before it ever reached the
+  // scrollable element underneath it.
+  function handleCardClick(e) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickedLeftHalf = e.clientX - rect.left < rect.width / 2;
+    if (clickedLeftHalf) {
+      goPrev();
+    } else {
+      goNext();
+    }
+  }
+
   function toggleMute() {
     const next = !muted;
     const audio = audioRef.current;
@@ -185,13 +201,11 @@ export default function WrappedCards({ stats, displayName, footer, shareEnabled,
         {muted ? '🔇' : '🔊'}
       </button>
 
-      <button className="wc-tap wc-tap--left" aria-label="Previous card" onClick={goPrev} disabled={index === 0} />
-      <button className="wc-tap wc-tap--right" aria-label="Next card" onClick={goNext} disabled={index === cards.length - 1} />
-
       <AnimatePresence mode="wait">
         <motion.div
           key={card.key}
           className="wc-card"
+          onClick={handleCardClick}
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -24 }}
@@ -210,12 +224,14 @@ export default function WrappedCards({ stats, displayName, footer, shareEnabled,
         </button>
       )}
 
-      {index === cards.length - 1 && shareEnabled && (
+      {/* Every card except the intro (index 0) gets the footer - there's
+          nothing to share yet on the title card itself. */}
+      {index > 0 && shareEnabled && (
         <div className="wc-footer">
           <ShareMenu shellRef={shellRef} onCreateShareLink={onCreateShareLink} />
         </div>
       )}
-      {index === cards.length - 1 && !shareEnabled && footer && <div className="wc-footer">{footer}</div>}
+      {index > 0 && !shareEnabled && footer && <div className="wc-footer">{footer}</div>}
     </div>
   );
 }
