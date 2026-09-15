@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import BrandMark from './BrandMark';
 import ShareMenu from './ShareMenu';
@@ -96,49 +96,16 @@ function buildCards(stats, displayName) {
 
 export default function WrappedCards({ stats, displayName, footer, shareEnabled, onCreateShareLink }) {
   const [index, setIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  // Persists across card navigation, unlike pausing - muting here means "don't
-  // autoplay the next clip either," not just "stop the current one."
-  const [muted, setMuted] = useState(false);
-  const audioRef = useRef(null);
   const shellRef = useRef(null);
   const cards = buildCards(stats, displayName);
   const card = cards[index];
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    return () => audio && audio.pause();
-  }, []);
-
-  function playCardAudio(targetCard) {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.pause();
-    if (targetCard.preview) {
-      audio.src = targetCard.preview.preview_url;
-      audio.currentTime = 0;
-      if (!muted) {
-        // Autoplay is allowed here because this only ever runs inside a click
-        // handler (goNext/goPrev) - i.e. as a direct result of a user gesture.
-        audio.play().catch(() => {});
-      }
-    } else {
-      audio.removeAttribute('src');
-    }
-  }
-
   function goNext() {
-    if (index >= cards.length - 1) return;
-    const next = index + 1;
-    playCardAudio(cards[next]);
-    setIndex(next);
+    setIndex((i) => Math.min(i + 1, cards.length - 1));
   }
 
   function goPrev() {
-    if (index <= 0) return;
-    const prev = index - 1;
-    playCardAudio(cards[prev]);
-    setIndex(prev);
+    setIndex((i) => Math.max(i - 1, 0));
   }
 
   // Tapping the left/right half of the card advances/rewinds, Stories-style.
@@ -157,32 +124,8 @@ export default function WrappedCards({ stats, displayName, footer, shareEnabled,
     }
   }
 
-  function toggleMute() {
-    const next = !muted;
-    const audio = audioRef.current;
-    if (audio) {
-      if (next) {
-        audio.pause();
-      } else if (card.preview) {
-        if (audio.src !== card.preview.preview_url) {
-          audio.src = card.preview.preview_url;
-          audio.currentTime = 0;
-        }
-        audio.play().catch(() => {});
-      }
-    }
-    setMuted(next);
-  }
-
   return (
     <div className="wc-shell" ref={shellRef} style={{ background: GRADIENTS[index % GRADIENTS.length] }}>
-      <audio
-        ref={audioRef}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onEnded={() => setIsPlaying(false)}
-      />
-
       <div className="wc-progress">
         {cards.map((c, i) => (
           <span key={c.key} className={`wc-progress-seg ${i <= index ? 'is-filled' : ''}`} />
@@ -192,14 +135,6 @@ export default function WrappedCards({ stats, displayName, footer, shareEnabled,
       <div className="wc-topbar">
         <BrandMark size="sm" />
       </div>
-
-      <button
-        className="wc-mute-toggle"
-        aria-label={muted ? 'Unmute preview clips' : 'Mute preview clips'}
-        onClick={toggleMute}
-      >
-        {muted ? '🔇' : '🔊'}
-      </button>
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -216,12 +151,27 @@ export default function WrappedCards({ stats, displayName, footer, shareEnabled,
       </AnimatePresence>
 
       {card.preview && (
-        <button className="wc-now-playing" onClick={toggleMute}>
-          <span className="wc-now-playing__icon">{muted ? '🔇' : isPlaying ? '⏸' : '▶'}</span>
-          <span className="wc-now-playing__text">
-            {card.preview.track_name} — {card.preview.artist_name}
-          </span>
-        </button>
+        // Spotify's own official embed player - not our audio. Since Nov
+        // 2024, Spotify's Web API returns preview_url: null for apps without
+        // Extended API Access (confirmed for this app), so a custom <audio>
+        // player has nothing to play; this embed is a separate Spotify
+        // product with no such restriction. Trade-off accepted: playback
+        // needs a tap on Spotify's own play button (browsers don't allow an
+        // embedded cross-origin iframe to autoplay with sound), and it's
+        // excluded from the "Save as Image"/"Share" export (ShareMenu.js)
+        // since cross-origin iframe content can't be captured to canvas.
+        <div className="wc-embed">
+          <iframe
+            key={card.key}
+            title={`${card.preview.track_name} preview`}
+            src={`https://open.spotify.com/embed/track/${card.preview.track_id}?utm_source=generator&theme=0`}
+            width="100%"
+            height="152"
+            frameBorder="0"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            loading="lazy"
+          />
+        </div>
       )}
 
       {/* Every card except the intro (index 0) gets the footer - there's

@@ -107,35 +107,34 @@ def _estimate_top_listener_percent(popularity, rank_index):
 
 
 def _build_previews(token, market, top_tracks, favorite_artists, best_genre):
-    """Pick one preview-able clip each for the top-song, top-artist, and
-    top-genre cards, making sure no two of those three clips are the same
-    track. Any slot Spotify can't supply a 30s preview for comes back None -
-    the frontend just shows no play button for that card rather than
-    crashing or (worse) silently substituting a different song than the one
-    it's labeled as playing."""
+    """Pick one clip each for the top-song, top-artist, and top-genre cards,
+    making sure no two of those three clips are the same track. These play
+    via Spotify's embed player (WrappedCards.js), which only needs a
+    track id - not the (restricted, usually-null - see STUDY_NOTES.md §25)
+    preview_url field - so picking here is purely about avoiding duplicates,
+    not about finding a playable preview."""
     used_ids = set()
     previews = {'top_song': None, 'top_artist': None, 'top_genre': None}
 
     # Slot 1: the user's own #1 top track. This one is never substituted -
-    # it either has a preview or it doesn't, since swapping in a different
-    # song would misrepresent what's actually the top track.
+    # swapping in a different song would misrepresent what's actually the
+    # top track.
     if top_tracks:
         top = top_tracks[0]
-        if top.get('preview_url'):
-            previews['top_song'] = _preview_payload(top['id'], top['song_name'], top['artists'], top['preview_url'])
-            used_ids.add(top['id'])
+        previews['top_song'] = _preview_payload(top['id'], top['song_name'], top['artists'], top.get('preview_url'))
+        used_ids.add(top['id'])
 
-    # Slot 2: the most popular (by Spotify's own ranking) available-preview
-    # track by the user's #1 top artist.
+    # Slot 2: the most popular (by Spotify's own ranking) track by the
+    # user's #1 top artist, that isn't already the top_song track.
     artist_track_cache = {}
     if favorite_artists:
         top_artist = favorite_artists[0]
         candidates = _fetch_artist_top_tracks(token, top_artist['id'], market)
         artist_track_cache[top_artist['id']] = candidates
-        picked = _pick_preview_track(candidates, used_ids)
+        picked = _pick_unused_track(candidates, used_ids)
         if picked:
             previews['top_artist'] = _preview_payload(
-                picked['id'], picked['name'], top_artist['name'], picked['preview_url']
+                picked['id'], picked['name'], top_artist['name'], picked.get('preview_url')
             )
             used_ids.add(picked['id'])
 
@@ -147,19 +146,19 @@ def _build_previews(token, market, top_tracks, favorite_artists, best_genre):
             candidates = artist_track_cache.get(genre_artist['id'])
             if candidates is None:
                 candidates = _fetch_artist_top_tracks(token, genre_artist['id'], market)
-            picked = _pick_preview_track(candidates, used_ids)
+            picked = _pick_unused_track(candidates, used_ids)
             if picked:
                 previews['top_genre'] = _preview_payload(
-                    picked['id'], picked['name'], genre_artist['name'], picked['preview_url']
+                    picked['id'], picked['name'], genre_artist['name'], picked.get('preview_url')
                 )
                 used_ids.add(picked['id'])
 
     return previews
 
 
-def _pick_preview_track(candidates, used_ids):
+def _pick_unused_track(candidates, used_ids):
     for track in candidates:
-        if track['preview_url'] and track['id'] not in used_ids:
+        if track['id'] not in used_ids:
             return track
     return None
 
