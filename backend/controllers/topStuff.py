@@ -69,7 +69,11 @@ def build_wrapped_stats(token, time_range):
         for track in tracks
     ]
 
-    best_genre = max(favorite_genres.items(), key=lambda item: item[1])[0] if favorite_genres else None
+    top_genres = [
+        {'name': name, 'count': count}
+        for name, count in sorted(favorite_genres.items(), key=lambda item: item[1], reverse=True)[:5]
+    ]
+    best_genre = top_genres[0]['name'] if top_genres else None
 
     previews = _build_previews(token, market, tracks, favorite_artists, best_genre)
 
@@ -79,6 +83,7 @@ def build_wrapped_stats(token, time_range):
         'favorite_songs': favorite_songs,
         'favorite_artists': favorite_artists,
         'favorite_genres': favorite_genres,
+        'top_genres': top_genres,
         'best_genre': best_genre,
         'previews': previews,
     }

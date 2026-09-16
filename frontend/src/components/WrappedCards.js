@@ -27,14 +27,21 @@ function buildCards(stats, displayName) {
     },
   ];
 
-  if (stats.best_genre) {
+  if (stats.top_genres && stats.top_genres.length > 0) {
     cards.push({
       key: 'genre',
       preview: previews.top_genre,
       content: (
         <>
-          <p className="wc-eyebrow">Your top genre</p>
-          <h1 className="wc-headline wc-headline--big">{stats.best_genre}</h1>
+          <p className="wc-eyebrow">Your top genres</p>
+          <ol className="wc-list">
+            {stats.top_genres.map((genre, i) => (
+              <li key={genre.name} className={`wc-list-item${i === 0 ? ' wc-list-item--top' : ''}`}>
+                <span className="wc-rank">{i === 0 ? '👑' : i + 1}</span>
+                <span className="wc-list-label wc-list-label--capitalize">{genre.name}</span>
+              </li>
+            ))}
+          </ol>
         </>
       ),
     });
@@ -49,8 +56,8 @@ function buildCards(stats, displayName) {
           <p className="wc-eyebrow">Top Artists</p>
           <ol className="wc-list">
             {stats.favorite_artists.map((artist, i) => (
-              <li key={artist.name} className="wc-list-item">
-                <span className="wc-rank">{i + 1}</span>
+              <li key={artist.name} className={`wc-list-item${i === 0 ? ' wc-list-item--top' : ''}`}>
+                <span className="wc-rank">{i === 0 ? '👑' : i + 1}</span>
                 {artist.url && <img className="wc-thumb" src={artist.url} alt="" />}
                 <span className="wc-list-label">
                   {artist.name}
@@ -77,8 +84,8 @@ function buildCards(stats, displayName) {
           <p className="wc-eyebrow">Top Songs</p>
           <ol className="wc-list">
             {stats.favorite_songs.map((song, i) => (
-              <li key={`${song.song_name}-${i}`} className="wc-list-item">
-                <span className="wc-rank">{i + 1}</span>
+              <li key={`${song.song_name}-${i}`} className={`wc-list-item${i === 0 ? ' wc-list-item--top' : ''}`}>
+                <span className="wc-rank">{i === 0 ? '👑' : i + 1}</span>
                 <span className="wc-list-label">
                   {song.song_name}
                   <span className="wc-list-sub">{song.artists}</span>
@@ -155,16 +162,21 @@ export default function WrappedCards({ stats, displayName, footer, shareEnabled,
         // 2024, Spotify's Web API returns preview_url: null for apps without
         // Extended API Access (confirmed for this app), so a custom <audio>
         // player has nothing to play; this embed is a separate Spotify
-        // product with no such restriction. Trade-off accepted: playback
-        // needs a tap on Spotify's own play button (browsers don't allow an
-        // embedded cross-origin iframe to autoplay with sound), and it's
-        // excluded from the "Save as Image"/"Share" export (ShareMenu.js)
-        // since cross-origin iframe content can't be captured to canvas.
+        // product with no such restriction. autoplay=1 asks Spotify's
+        // player to start immediately; browsers only honor unmuted iframe
+        // autoplay when it's tied to a real user gesture, and this iframe
+        // is freshly created (new `key`) as a direct result of the click
+        // that changed cards, so it has a real shot at working - but it's
+        // not guaranteed on every browser (Safari is stricter than Chrome
+        // here), so a tap on Spotify's own play button is still the
+        // fallback if a given browser blocks it. Excluded from the
+        // "Save as Image"/"Share" export (ShareMenu.js) either way, since
+        // cross-origin iframe content can't be captured to canvas.
         <div className="wc-embed">
           <iframe
             key={card.key}
             title={`${card.preview.track_name} preview`}
-            src={`https://open.spotify.com/embed/track/${card.preview.track_id}?utm_source=generator&theme=0`}
+            src={`https://open.spotify.com/embed/track/${card.preview.track_id}?utm_source=generator&theme=0&autoplay=1`}
             width="100%"
             height="152"
             frameBorder="0"

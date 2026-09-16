@@ -71,11 +71,6 @@
   margin: 0 0 8px;
 }
 
-.wc-headline--big {
-  font-size: 3rem;
-  text-transform: capitalize;
-}
-
 .wc-sub {
   opacity: 0.85;
   margin: 0;
@@ -97,13 +92,27 @@
   align-items: center;
   gap: 14px;
   text-align: left;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.wc-list-item--top {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 210, 63, 0.45);
+  padding: 8px 10px;
+  margin: -8px -10px 4px;
 }
 
 .wc-rank {
   font-weight: 800;
   font-size: 1.1rem;
   width: 22px;
+  flex-shrink: 0;
   opacity: 0.85;
+}
+
+.wc-list-item--top .wc-rank {
+  font-size: 1.4rem;
 }
 
 .wc-thumb {
@@ -114,16 +123,37 @@
   flex-shrink: 0;
 }
 
+.wc-list-item--top .wc-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+}
+
 .wc-list-label {
   font-weight: 600;
+  font-size: 1rem;
   display: flex;
   flex-direction: column;
+}
+
+.wc-list-item--top .wc-list-label {
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: var(--bee-yellow);
+}
+
+.wc-list-label--capitalize {
+  text-transform: capitalize;
 }
 
 .wc-list-sub {
   font-weight: 400;
   font-size: 0.8rem;
   opacity: 0.75;
+}
+
+.wc-list-item--top .wc-list-sub {
+  opacity: 0.85;
 }
 
 .wc-embed {
