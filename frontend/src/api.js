@@ -10,7 +10,11 @@
 // CRA's part, so refreshing a client-side route doesn't get sent to the
 // API). That makes the relative-path trick unusable for the login link, so
 // it points directly at the Flask server instead.
-export const LOGIN_URL = `${process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000'}/api/login`;
+// Built from window.location.hostname rather than a fixed value, so this
+// works whether the page was opened as 127.0.0.1 (desktop) or a LAN IP (a
+// phone on the same WiFi) - the backend (login.py's _redirect_uri) mirrors
+// this same "derive from whoever's actually asking" approach.
+export const LOGIN_URL = `http://${window.location.hostname}:5000/api/login`;
 
 async function request(path, options = {}) {
   const response = await fetch(path, {

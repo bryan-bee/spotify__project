@@ -26,8 +26,14 @@ app.config["SESSION_PERMANENT"] = True
 Session(app)
 
 # The frontend runs on a different origin (React dev server) and needs to send
-# the session cookie with each request, so credentials must be explicitly allowed.
-CORS(app, supports_credentials=True, origins=[os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")])
+# the session cookie with each request, so credentials must be explicitly
+# allowed - and explicitly, since a wildcard origin can't be combined with
+# credentials (see STUDY_NOTES.md §7). Listing both 127.0.0.1 (desktop) and
+# the LAN IP (a phone on the same WiFi) lets both be tested without editing
+# this every time you switch devices.
+default_origins = "http://127.0.0.1:3000,http://192.168.68.62:3000"
+FRONTEND_ORIGINS = [o.strip() for o in os.getenv("FRONTEND_ORIGINS", default_origins).split(",")]
+CORS(app, supports_credentials=True, origins=FRONTEND_ORIGINS)
 
 from db import init_db
 from controllers.homepage import homepage_controller
@@ -45,4 +51,8 @@ app.register_blueprint(topStuff_controller)
 app.register_blueprint(share_controller)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # host="0.0.0.0" binds to every network interface, not just the loopback
+    # one - Flask's default (127.0.0.1 only) would otherwise refuse
+    # connections from another device on the LAN (a phone) entirely, before
+    # any of the redirect_uri/CORS logic above even gets a chance to run.
+    app.run(host='0.0.0.0', debug=True)

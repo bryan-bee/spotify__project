@@ -11,8 +11,6 @@ from spotify_auth import basic_auth_header, store_token_response
 login_controller = Blueprint('login', __name__)
 
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
-FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
 scopes = os.getenv("SPOTIFY_SCOPES").split()
 SPOTIFY_SCOPES = " ".join(scopes)
 
@@ -22,16 +20,39 @@ def generate_random_string(length):
     return ''.join(random.choice(letters) for i in range(length))
 
 
+def _redirect_uri():
+    """Built from whatever host the browser actually used to reach this
+    backend (127.0.0.1 for local desktop testing, a LAN IP for a phone on
+    the same network, etc.) instead of a single fixed value - so switching
+    which device you're testing from doesn't require editing .env every
+    time. Spotify still requires each one to be pre-registered in the
+    Dashboard's Redirect URIs list; this only removes the need to keep
+    swapping which one is "active" in our own config."""
+    return f"{request.scheme}://{request.host}/api/redirect"
+
+
+def _frontend_origin():
+    # The React dev server always runs on port 3000 on the same host the
+    # backend (port 5000) was reached on, by this project's own convention.
+    host = request.host.split(':')[0]
+    return f"{request.scheme}://{host}:3000"
+
+
 # Sends the user to Spotify's own login/consent page. This is a full browser
 # navigation (not a fetch call) since Spotify needs to show its own UI.
 @login_controller.route('/api/login', methods=['GET'])
 def login():
     state = generate_random_string(16)
     session['state'] = state
+    # The token exchange in /api/redirect must send this exact same
+    # redirect_uri value back to Spotify, so it's stashed in the session now
+    # rather than re-derived later (by then, the "incoming" request is
+    # Spotify's own redirect, not the original browser request).
+    session['oauth_redirect_uri'] = _redirect_uri()
     auth_url = 'https://accounts.spotify.com/authorize?' + urlparse.urlencode({
         'client_id': SPOTIFY_CLIENT_ID,
         'response_type': 'code',
-        'redirect_uri': SPOTIFY_REDIRECT_URI,
+        'redirect_uri': session['oauth_redirect_uri'],
         'state': state,
         'scope': SPOTIFY_SCOPES,
         'show_dialog': 'true'
@@ -45,16 +66,17 @@ def redirectPage():
     code = request.args.get('code')
     state = request.args.get('state')
     error = request.args.get('error')
+    frontend_origin = _frontend_origin()
 
     if error:
-        return redirect(f"{FRONTEND_ORIGIN}/?login_error={error}")
+        return redirect(f"{frontend_origin}/?login_error={error}")
 
     if state is None or state != session.get('state'):
-        return redirect(f"{FRONTEND_ORIGIN}/?login_error=state_mismatch")
+        return redirect(f"{frontend_origin}/?login_error=state_mismatch")
 
     data = {
         'code': code,
-        'redirect_uri': SPOTIFY_REDIRECT_URI,
+        'redirect_uri': session.get('oauth_redirect_uri'),
         'grant_type': 'authorization_code'
     }
     headers = {
@@ -64,7 +86,7 @@ def redirectPage():
 
     r = requests.post('https://accounts.spotify.com/api/token', data=data, headers=headers)
     if r.status_code != 200:
-        return redirect(f"{FRONTEND_ORIGIN}/?login_error=token_exchange_failed")
+        return redirect(f"{frontend_origin}/?login_error=token_exchange_failed")
 
     store_token_response(r.json())
-    return redirect(f"{FRONTEND_ORIGIN}/dashboard")
+    return redirect(f"{frontend_origin}/dashboard")
