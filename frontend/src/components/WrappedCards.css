@@ -97,8 +97,11 @@
 }
 
 .wc-list-item--top {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 210, 63, 0.45);
+  /* Opaque enough to guarantee contrast against every card gradient -
+     including the yellow one, where the old translucent-white background
+     let the yellow highlight text blend straight into a yellow backdrop. */
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 210, 63, 0.5);
   padding: 8px 10px;
   margin: -8px -10px 4px;
 }
@@ -139,7 +142,10 @@
 .wc-list-item--top .wc-list-label {
   font-weight: 800;
   font-size: 1.2rem;
-  color: var(--bee-yellow);
+  /* White, not gold - against a solid dark pill this still reads as "the
+     highlighted one" (via the crown, size, and border) without risking a
+     yellow-on-yellow collision on the card whose own gradient is yellow. */
+  color: var(--bee-white);
 }
 
 .wc-list-label--capitalize {

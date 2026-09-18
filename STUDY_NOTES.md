@@ -1316,3 +1316,31 @@ after adding this).
   proxy-to-application hop itself is often plain HTTP even when the client-to-proxy hop was HTTPS.
   An application must explicitly opt in to trusting it (e.g. via `ProxyFix`), since blindly trusting
   a client-supplied header of the same name would let anyone spoof it.
+
+---
+
+## 31. Bug: yellow highlight text blended into the yellow card background
+
+### Symptom
+
+On the genre card specifically, the gold/yellow text used to highlight the #1 ranked item
+(`wc-list-item--top`) was nearly unreadable against the card's own background.
+
+### Root cause
+
+`WrappedCards` cycles through five gradients by card index (`GRADIENTS[index % GRADIENTS.length]`).
+The genre card lands on `linear-gradient(160deg, #ffd23f, #ff6b6b)` - which starts with the exact
+same yellow (`#ffd23f`, `--bee-yellow`) used for the highlighted item's text color. The highlighted
+row's own background was only a translucent white overlay (`rgba(255, 255, 255, 0.12)`), not opaque
+enough to reliably separate the text from whatever gradient happened to be showing through it - so
+on every *other* card, gold-on-dark-gradient read fine, but on this one specific gradient, it was
+gold text nearly on top of gold.
+
+### Fix
+
+Rather than pick a different single text color that might just collide with a *different* one of
+the five gradients later, made the highlighted pill's background properly opaque
+(`rgba(0, 0, 0, 0.55)`) so it reliably separates the text from any card's gradient underneath it,
+and switched the label color from gold to white - the "this is the highlighted one" signal still
+comes through clearly via the crown icon, the larger/bolder text, and the gold border, without
+depending on a specific text color contrasting correctly against five different backgrounds.
