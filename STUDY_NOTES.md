@@ -1344,3 +1344,14 @@ the five gradients later, made the highlighted pill's background properly opaque
 and switched the label color from gold to white - the "this is the highlighted one" signal still
 comes through clearly via the crown icon, the larger/bolder text, and the gold border, without
 depending on a specific text color contrasting correctly against five different backgrounds.
+
+## 32. "I don't see the link anywhere" - it was there, just too subtle to notice
+
+Added a site link under the brand mark (§31's neighbor in history), but a report that it wasn't
+visible at all turned out not to be a missing-deploy problem: fetching the live site's actual JS
+bundle (`curl` the deployed `/static/js/main.*.js` and `grep` for `wc-site-link`) confirmed the
+code was really live. The real cause was the same *category* of bug as §31, just not yet fixed for
+this element: 11px text at 70% opacity with no background sat too quietly against several of the
+five card gradients to register as "a thing you can click," even though it was never actually
+missing from the page. Fixed with the same technique as §31 - an opaque dark pill behind the text
+instead of relying on the text's own color/opacity to contrast against every possible gradient.
