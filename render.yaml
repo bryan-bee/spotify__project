@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: beespotifywrapped
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SPOTIFY_CLIENT_ID
+        sync: false
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false
+      - key: SPOTIFY_SCOPES
+        value: user-top-read
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: APP_ENV
+        value: production

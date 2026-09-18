@@ -10,11 +10,20 @@
 // CRA's part, so refreshing a client-side route doesn't get sent to the
 // API). That makes the relative-path trick unusable for the login link, so
 // it points directly at the Flask server instead.
-// Built from window.location.hostname rather than a fixed value, so this
-// works whether the page was opened as 127.0.0.1 (desktop) or a LAN IP (a
-// phone on the same WiFi) - the backend (login.py's _redirect_uri) mirrors
-// this same "derive from whoever's actually asking" approach.
-export const LOGIN_URL = `http://${window.location.hostname}:5000/api/login`;
+//
+// In production (npm run build sets NODE_ENV=production automatically),
+// this same Flask app also serves the built frontend - genuinely the same
+// origin, so a relative link is correct and simplest, exactly like the
+// fetch() calls above. In local dev, the React dev server (this page) and
+// Flask are two separate processes/ports, so it's built from
+// window.location.hostname instead of a fixed value - works whether the
+// page was opened as 127.0.0.1 (desktop) or a LAN IP (a phone on the same
+// WiFi) - the backend (login.py's _redirect_uri) mirrors this same
+// "derive from whoever's actually asking" approach.
+export const LOGIN_URL =
+  process.env.NODE_ENV === 'production'
+    ? '/api/login'
+    : `http://${window.location.hostname}:5000/api/login`;
 
 async function request(path, options = {}) {
   const response = await fetch(path, {

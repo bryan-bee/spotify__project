@@ -13,6 +13,7 @@ login_controller = Blueprint('login', __name__)
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 scopes = os.getenv("SPOTIFY_SCOPES").split()
 SPOTIFY_SCOPES = " ".join(scopes)
+IS_PRODUCTION = os.getenv("APP_ENV") == "production"
 
 
 def generate_random_string(length):
@@ -32,8 +33,14 @@ def _redirect_uri():
 
 
 def _frontend_origin():
-    # The React dev server always runs on port 3000 on the same host the
-    # backend (port 5000) was reached on, by this project's own convention.
+    # In production, this same Flask app also serves the built frontend
+    # (app.py's catch-all route) - genuinely the same origin, so a relative
+    # path is correct and simpler than constructing one. Locally, the React
+    # dev server runs separately on port 3000 of the same host Flask (port
+    # 5000) was reached on, by this project's own convention, so that needs
+    # a real cross-port absolute URL instead.
+    if IS_PRODUCTION:
+        return ""
     host = request.host.split(':')[0]
     return f"{request.scheme}://{host}:3000"
 
