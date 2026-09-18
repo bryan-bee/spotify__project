@@ -141,6 +141,13 @@ export default function WrappedCards({ stats, displayName, footer, shareEnabled,
 
       <div className="wc-topbar">
         <BrandMark size="sm" />
+        {/* Shown on every card (including exported/shared images) so anyone
+            who sees a shared card - not just people browsing the GitHub repo -
+            knows where to go to make their own. Derived from the actual
+            origin rather than hardcoded, so this is correct in local dev too. */}
+        <a className="wc-site-link" href={window.location.origin} target="_blank" rel="noreferrer">
+          {window.location.hostname}
+        </a>
       </div>
 
       <AnimatePresence mode="wait">
