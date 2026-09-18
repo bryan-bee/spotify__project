@@ -33,6 +33,12 @@ export default function SharePage() {
       <WrappedCards
         stats={stats}
         displayName={stats.display_name}
+        shareEnabled
+        // A public visitor isn't logged in and can't create a new
+        // snapshot (nor should they - it's not their data) - this page
+        // already has a stable URL, so "Copy Link" just copies the one
+        // that's already open instead of calling the backend.
+        onCreateShareLink={() => Promise.resolve(window.location.href)}
         footer={
           <a className="share-page__cta" href="/">
             Make your own BeeSpotifyWrapped

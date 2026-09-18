@@ -187,13 +187,16 @@ export default function WrappedCards({ stats, displayName, footer, shareEnabled,
       )}
 
       {/* Every card except the intro (index 0) gets the footer - there's
-          nothing to share yet on the title card itself. */}
-      {index > 0 && shareEnabled && (
+          nothing to share yet on the title card itself. shareEnabled and
+          footer are independent: SharePage passes both (the share menu plus
+          its own "make your own" CTA below it), Dashboard passes only
+          shareEnabled. */}
+      {index > 0 && (shareEnabled || footer) && (
         <div className="wc-footer">
-          <ShareMenu shellRef={shellRef} onCreateShareLink={onCreateShareLink} />
+          {shareEnabled && <ShareMenu shellRef={shellRef} onCreateShareLink={onCreateShareLink} />}
+          {footer}
         </div>
       )}
-      {index > 0 && !shareEnabled && footer && <div className="wc-footer">{footer}</div>}
     </div>
   );
 }
