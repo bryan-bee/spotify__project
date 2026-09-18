@@ -1355,3 +1355,49 @@ this element: 11px text at 70% opacity with no background sat too quietly agains
 five card gradients to register as "a thing you can click," even though it was never actually
 missing from the page. Fixed with the same technique as §31 - an opaque dark pill behind the text
 instead of relying on the text's own color/opacity to contrast against every possible gradient.
+
+---
+
+## 33. Bug: a friend's login "succeeded" but bounced straight back to the login screen
+
+### Symptom
+
+A friend, testing the real deployed app, logged into Spotify and clicked "Agree" - and landed
+right back on the login screen, with nothing explaining why.
+
+### Root cause: Spotify Developer Mode's user allowlist
+
+Every Spotify app starts in **Development Mode**, and stays there unless the app owner requests
+and is granted **Extended Quota Mode** (a manual Spotify review process). A Development Mode app's
+OAuth *login* itself works for anyone - but actual Spotify Web API calls made with that user's
+token only succeed for up to **25 accounts the app owner has explicitly added** in the Dashboard's
+User Management settings. Everyone else's login/consent completes normally, but the first real API
+call Spotify receives on their behalf comes back `403 Forbidden`.
+
+That's exactly what happened here: `/api/redirect` completed the token exchange fine (that's just
+OAuth mechanics, unrelated to the allowlist) and redirected to `/dashboard`, which immediately
+calls `/api/me` to fetch the profile - and *that* call hit the 403. The bug that made this
+confusing wasn't the 403 itself (expected, until the friend is added to the allowlist) - it was
+that `Dashboard.js`'s `fetchMe().catch()` treated *any* failure identically to "not logged in" and
+silently navigated back to `/`, making a permissions problem look pixel-for-pixel identical to
+never having logged in at all. Nothing in the UI distinguished "you're not logged in" from
+"Spotify rejected this specific request."
+
+### Fix
+
+Two separate things, correctly separate:
+
+1. **The actual unblock** (a Dashboard setting, not a code change): add the friend's Spotify
+   account email in the Spotify Developer Dashboard → this app → Settings → User Management.
+2. **The UX bug**, fixed in code: `Dashboard.js` now checks `err.status` - a real `401` still means
+   "not logged in" and goes back to the login screen exactly as before, but any *other* error
+   (this 403, or a transient Spotify outage, etc.) now renders an actual visible message on the
+   dashboard instead of vanishing into an unexplained redirect.
+
+### Glossary addition
+
+- **Spotify Developer Mode / Extended Quota Mode** - every new Spotify app starts restricted to 25
+  manually-allowlisted user accounts (Development Mode); Spotify can grant *Extended Quota Mode*
+  after a manual review to lift that cap for a public-facing app. OAuth login itself isn't gated by
+  this - actual Web API calls are, which is why the failure shows up one step *after* login
+  appears to succeed, not during it.
