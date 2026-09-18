@@ -71,7 +71,7 @@ def build_wrapped_stats(token, time_range):
 
     top_genres = [
         {'name': name, 'count': count}
-        for name, count in sorted(favorite_genres.items(), key=lambda item: item[1], reverse=True)[:5]
+        for name, count in sorted(favorite_genres.items(), key=lambda item: item[1], reverse=True)[:6]
     ]
     best_genre = top_genres[0]['name'] if top_genres else None
 
