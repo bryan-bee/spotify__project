@@ -13,6 +13,7 @@ const TIME_RANGES = [
 export default function Dashboard() {
   const navigate = useNavigate();
   const [me, setMe] = useState(null);
+  const [meError, setMeError] = useState(null);
   const [timeRange, setTimeRange] = useState('medium_term');
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,7 +22,22 @@ export default function Dashboard() {
   useEffect(() => {
     fetchMe()
       .then(setMe)
-      .catch(() => navigate('/', { replace: true }));
+      .catch((err) => {
+        if (err.status === 401) {
+          // Genuinely not logged in (or the session expired) - back to the login screen.
+          navigate('/', { replace: true });
+        } else {
+          // Login/token exchange succeeded, but Spotify rejected the actual API
+          // call - most commonly because this app is still in Spotify's
+          // restricted "Development Mode" and this account isn't on the
+          // allowlist. Show that instead of silently bouncing back to login
+          // with no explanation (which is what happened before this fix, and
+          // looked identical to "not logged in" from the outside).
+          setMeError(
+            "Spotify blocked this request. If you're not the site owner, this app may still be in restricted developer mode - ask the owner to add your Spotify account."
+          );
+        }
+      });
   }, [navigate]);
 
   useEffect(() => {
@@ -44,6 +60,14 @@ export default function Dashboard() {
   async function handleLogout() {
     await logout();
     navigate('/', { replace: true });
+  }
+
+  if (meError) {
+    return (
+      <div className="dashboard">
+        <p className="dashboard__status dashboard__status--error">{meError}</p>
+      </div>
+    );
   }
 
   if (!me) return null;
