@@ -7,6 +7,7 @@ load_dotenv()
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_session import Session
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # In production, this same Flask process also serves the already-built React
 # app (see the catch-all route at the bottom) - one origin for everything,
@@ -29,6 +30,15 @@ FRONTEND_BUILD_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', '
 FRONTEND_STATIC_DIR = os.path.join(FRONTEND_BUILD_DIR, 'static')
 
 app = Flask(__name__, static_folder=FRONTEND_STATIC_DIR, static_url_path='/static')
+
+# Render (like most PaaS platforms) terminates HTTPS at its own edge proxy
+# and forwards requests to this container over plain HTTP internally - so
+# without this, request.scheme reports "http" even when the browser used
+# "https", which broke login.py's dynamically-built redirect_uri (it came
+# out as http://..., not matching the https:// URI registered with
+# Spotify). The proxy does send an X-Forwarded-Proto header saying what the
+# real original scheme was; ProxyFix tells Flask to trust and use it.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # SECRET_KEY must be stable across restarts, or every existing session cookie
 # becomes unverifiable (and therefore unusable) the moment the server reloads.
