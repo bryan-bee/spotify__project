@@ -1260,3 +1260,59 @@ the fix. Killing all four and starting one fresh process resolved it. This is cl
 hazard on this specific Windows setup (backgrounded shell + Werkzeug's `debug=True` stat reloader),
 not a one-off - worth checking `netstat -ano | grep :5000` plus that same `Get-CimInstance` command
 first, before assuming a code change "didn't take," any time a restart is involved.
+
+---
+
+## 30. Bug: "redirect_uri: not matching configuration" again, this time on the real deployment
+
+### Symptom
+
+After deploying to Render (`https://beespotifywrapped.onrender.com`) and adding
+`https://beespotifywrapped.onrender.com/api/redirect` as a registered Redirect URI in the Spotify
+Dashboard - the exact value that should have matched - clicking "Log in with Spotify" still showed
+Spotify's "redirect_uri: not matching configuration" white-screen error.
+
+### Diagnosis: query the live deployment directly
+
+Same instinct as §25 - don't guess, check the real value being sent. Since the deployment is a
+public URL, this didn't even need a session token this time, just a plain request:
+```
+curl -s -i "https://beespotifywrapped.onrender.com/api/login" | grep -i "^location"
+```
+Decoded, the `redirect_uri` parameter read `http://beespotifywrapped.onrender.com/api/redirect` -
+**plain HTTP**, even though the browser reaching that page the whole time was using HTTPS.
+
+### Root cause
+
+Render (like Heroku, Railway, and most platforms in this category) terminates HTTPS at its own
+edge proxy and forwards the actual request to this app's container over plain HTTP internally -
+normal, standard architecture for this kind of platform, not a Render-specific quirk. `login.py`'s
+`_redirect_uri()` (§29) builds its value from `request.scheme`, which reflects what the WSGI server
+(gunicorn) actually received - plain HTTP - not what the browser actually used. The proxy does
+communicate the real original scheme via a standard `X-Forwarded-Proto: https` header, but Flask
+doesn't trust or use that header by default (rightly so - blindly trusting it would let anyone
+spoof their own `X-Forwarded-Proto` header directly if the app weren't sitting behind a real proxy
+that overwrites/sets it correctly).
+
+### Fix
+
+Werkzeug ships a small `ProxyFix` middleware built exactly for this:
+```python
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+```
+This tells Flask "there is exactly one trusted reverse proxy in front of this app, and its
+`X-Forwarded-Proto`/`X-Forwarded-Host` headers are trustworthy" - after this, `request.scheme`
+correctly reports `https` when reached through Render. Verified this doesn't regress local dev:
+with no proxy in front of the local Flask dev server, there's no `X-Forwarded-Proto` header on
+those requests at all, so `ProxyFix` has nothing to override and `request.scheme` still falls
+through to its normal value (confirmed `http://127.0.0.1:5000/api/redirect` unchanged locally
+after adding this).
+
+### Glossary addition
+
+- **`X-Forwarded-Proto`** - a de facto standard header a reverse proxy sets to tell the
+  application server what scheme (`http`/`https`) the original client actually used, since the
+  proxy-to-application hop itself is often plain HTTP even when the client-to-proxy hop was HTTPS.
+  An application must explicitly opt in to trusting it (e.g. via `ProxyFix`), since blindly trusting
+  a client-supplied header of the same name would let anyone spoof it.
